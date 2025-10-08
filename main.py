@@ -25,7 +25,7 @@ def api_basic_information():
         'server_time_utc': datetime.now(timezone.utc).isoformat(),
         'getting_started': {
             'example_endpoints': {
-                
+                ""
             }
         }
 
