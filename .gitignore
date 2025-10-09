@@ -4,3 +4,4 @@ __pycache__
 __pycache__/toolbox.cpython-311.pyc
 /__pycache__
 *.pyc
+/pycache/*
