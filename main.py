@@ -50,32 +50,38 @@ def convert_currency():
     amount = request.args.get("amount")
     date = request.args.get("date")
 
-    # If the date is not passed, use the current date. If the date is passed, verify if it's real and put it in the
-    # correct format YYYY-MM-DD
-    if date is None:
-        date = datetime.now().date().isoformat()
-    else:
-        try:
-            date = tb.get_formatted_date(date)
-        except tb.NonExistentDateError:
-            non_existent_date_error = {
-                "success": False,
-                "error_message": f"The date {date} does not exist",
-            }
-            return jsonify(non_existent_date_error), 400
-
     # Verifying if all the necessary URL parameters were passed
     if all([from_currency, to_currency, amount]):
 
-        # Defining the URL parameters which will be used to send a request to FrankFurter API
-        url_params = {"base": from_currency, "symbols": to_currency, "amount": amount}
-        # Lets consume the FrankFurter API to get real-time information on the conversion from one currency to another
-        response = tb.consume_frankfurter_api(f"/v1/{date}", url_params)
+        # If the date is not passed, use the current date. If the date is passed, verify if it's real and put it in the
+        # correct format YYYY-MM-DD
+        if date is None:
+            date = datetime.now().date().isoformat()
+        else:
+            try:
+                date = tb.get_formatted_date(date)
+            except tb.NonExistentDateError:
+                non_existent_date_error = {
+                    "success": False,
+                    "error_message": f"The date {date} does not exist",
+                }
+                return jsonify(non_existent_date_error), 400
 
-        tb.standardize_frankfurter_response(response, True)
+        # If the 'from' currency does not exist, raise an error
+        if tb.currency_exists(from_currency) == False:
+            non_existent_currency_error = {
+                "success": False,
+                "error_message": f"The currency '{from_currency}' does not exist",
+            }
+            return jsonify(non_existent_currency_error), 400
 
-        print(response)
-        return jsonify(response)
+        # If the 'to' currency does not exist and is diff from * (all), raise an error
+        if to_currency != "*" and tb.currency_exists(to_currency) == False:
+            non_existent_currency_error = {
+                "success": False,
+                "error_message": f"The currency '{to_currency}' does not exist",
+            }
+            return jsonify(non_existent_currency_error), 400
 
     else:
         variables_not_passed_error = {
@@ -83,6 +89,16 @@ def convert_currency():
             "error_message": 'The parameters "to", "from" and "amount" are mandatory',
         }
         return jsonify(variables_not_passed_error), 400
+
+    # Defining the URL parameters which will be used to send a request to FrankFurter API
+    url_params = {"base": from_currency, "symbols": to_currency, "amount": amount}
+    # Lets consume the FrankFurter API to get real-time information on the conversion from one currency to another
+    response = tb.consume_frankfurter_api(f"/v1/{date}", url_params)
+
+    tb.standardize_frankfurter_response(response, True)
+
+    print(response)
+    return jsonify(response)
 
 
 app.run(port=5000, host="localhost", debug=True)
