@@ -1,12 +1,11 @@
-from zipfile import FastLookup
-
 import requests
 import datetime
 
 # External API will use
-FRANKFURTER_BASE_URL = 'https://api.frankfurter.dev'
+FRANKFURTER_BASE_URL = "https://api.frankfurter.dev"
 
-def consume_frankfurter_api(endpoint: str, params: dict = None) -> dict| None:
+
+def consume_frankfurter_api(endpoint: str, params: dict = None) -> dict | None:
     # Just making sure the first char in the endpoint str is a /
     if endpoint[0] != "/":
         endpoint = "/" + endpoint
@@ -32,24 +31,53 @@ def consume_frankfurter_api(endpoint: str, params: dict = None) -> dict| None:
     # except requests.RequestException as general_err:
     #     print(f"An error occured: {general_err}")
 
+
 # print(consume_frankfurter_api("v1/latest", {'base': 'USD', 'symbols': 'EUR'}))
 
+
 def get_existing_currencies() -> dict:
-    currencies = {"AUD": "Australian Dollar", "BGN": "Bulgarian Lev", "BRL": "Brazilian Real", "CAD": "Canadian Dollar",
-     "CHF": "Swiss Franc", "CNY": "Chinese Renminbi Yuan", "CZK": "Czech Koruna", "DKK": "Danish Krone", "EUR": "Euro",
-     "GBP": "British Pound", "HKD": "Hong Kong Dollar", "HUF": "Hungarian Forint", "IDR": "Indonesian Rupiah",
-     "ILS": "Israeli New Sheqel", "INR": "Indian Rupee", "ISK": "Icelandic Króna", "JPY": "Japanese Yen",
-     "KRW": "South Korean Won", "MXN": "Mexican Peso", "MYR": "Malaysian Ringgit", "NOK": "Norwegian Krone",
-     "NZD": "New Zealand Dollar", "PHP": "Philippine Peso", "PLN": "Polish Złoty", "RON": "Romanian Leu",
-     "SEK": "Swedish Krona", "SGD": "Singapore Dollar", "THB": "Thai Baht", "TRY": "Turkish Lira",
-     "USD": "United States Dollar", "ZAR": "South African Rand"}
+    currencies = {
+        "AUD": "Australian Dollar",
+        "BGN": "Bulgarian Lev",
+        "BRL": "Brazilian Real",
+        "CAD": "Canadian Dollar",
+        "CHF": "Swiss Franc",
+        "CNY": "Chinese Renminbi Yuan",
+        "CZK": "Czech Koruna",
+        "DKK": "Danish Krone",
+        "EUR": "Euro",
+        "GBP": "British Pound",
+        "HKD": "Hong Kong Dollar",
+        "HUF": "Hungarian Forint",
+        "IDR": "Indonesian Rupiah",
+        "ILS": "Israeli New Sheqel",
+        "INR": "Indian Rupee",
+        "ISK": "Icelandic Króna",
+        "JPY": "Japanese Yen",
+        "KRW": "South Korean Won",
+        "MXN": "Mexican Peso",
+        "MYR": "Malaysian Ringgit",
+        "NOK": "Norwegian Krone",
+        "NZD": "New Zealand Dollar",
+        "PHP": "Philippine Peso",
+        "PLN": "Polish Złoty",
+        "RON": "Romanian Leu",
+        "SEK": "Swedish Krona",
+        "SGD": "Singapore Dollar",
+        "THB": "Thai Baht",
+        "TRY": "Turkish Lira",
+        "USD": "United States Dollar",
+        "ZAR": "South African Rand",
+    }
 
     return currencies
+
 
 def currency_exists(currency: str) -> bool:
     "Verifies if the given currency exists"
     currencies = get_existing_currencies()
     return True if currency in currencies.keys() else False
+
 
 def date_is_real(str_date: str) -> bool:
     date_formats = ["%Y-%m-%d", "%d-%m-%Y"]
@@ -65,7 +93,9 @@ def date_is_real(str_date: str) -> bool:
 
 class NonExistentDateError(ValueError):
     """This error object will be raised when the Date passed to our get_formatted_date function does not exist"""
+
     pass
+
 
 def get_formatted_date(str_date: str) -> str:
     if not date_is_real(str_date):
@@ -79,3 +109,20 @@ def get_formatted_date(str_date: str) -> str:
         return formatted_date.date().isoformat()
 
 
+def standardize_frankfurter_response(response: dict, success_status: bool):
+    """
+    The purpose of this function is to customize the frankfurter API responses by adding
+    our default information and also changing some response parameters.
+    """
+
+    # Lets add the success status to the frankfurters' response
+    response.update(
+        {
+            "success": success_status,
+        }
+    )
+
+    # replace "base" with "from" in the response key
+    response["from"] = response.pop("base")
+    # replace "rates" with "to" in the response key
+    response["to"] = response.pop("rates")
