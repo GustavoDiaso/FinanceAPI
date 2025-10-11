@@ -1,11 +1,17 @@
 import requests
 import datetime
+from functools import lru_cache, cache
 
 # External API will use
 FRANKFURTER_BASE_URL = "https://api.frankfurter.dev"
 
+# Establishing our http session to send requests
+session = requests.Session()
 
-def consume_frankfurter_api(endpoint: str, params: dict = None) -> dict | None:
+
+def consume_frankfurter_api(
+    endpoint: str, params: dict = None, http_session: requests.Session = session
+) -> dict | None:
     # Just making sure the first char in the endpoint str is a /
     if endpoint[0] != "/":
         endpoint = "/" + endpoint
@@ -13,7 +19,7 @@ def consume_frankfurter_api(endpoint: str, params: dict = None) -> dict | None:
     url = f"{FRANKFURTER_BASE_URL}{endpoint}"
 
     # Consuming the API
-    response = requests.get(url, params, timeout=10)
+    response = http_session.get(url, params=params, timeout=10)
 
     # automatically raises an exception if the HTTPS request returned an unsuccessful status code
     response.raise_for_status()
@@ -36,7 +42,7 @@ def consume_frankfurter_api(endpoint: str, params: dict = None) -> dict | None:
 
 
 def get_existing_currencies() -> dict:
-    currencies = {
+    return {
         "AUD": "Australian Dollar",
         "BGN": "Bulgarian Lev",
         "BRL": "Brazilian Real",
@@ -70,11 +76,9 @@ def get_existing_currencies() -> dict:
         "ZAR": "South African Rand",
     }
 
-    return currencies
-
 
 def currency_exists(currency: str) -> bool:
-    "Verifies if the given currency exists"
+    """Verifies if the given currency exists"""
     currencies = get_existing_currencies()
     return True if currency in currencies.keys() else False
 
@@ -103,10 +107,10 @@ def get_formatted_date(str_date: str) -> str:
 
     try:
         formatted_date = datetime.datetime.strptime(str_date, "%Y-%m-%d")
-        return formatted_date.date().isoformat()
     except ValueError:
         formatted_date = datetime.datetime.strptime(str_date, "%d-%m-%Y")
-        return formatted_date.date().isoformat()
+
+    return formatted_date.date().isoformat()
 
 
 def standardize_frankfurter_response(response: dict, success_status: bool):
@@ -114,14 +118,8 @@ def standardize_frankfurter_response(response: dict, success_status: bool):
     The purpose of this function is to customize the frankfurter API responses by adding
     our default information and also changing some response parameters.
     """
-
     # Lets add the success status to the frankfurters' response
-    response.update(
-        {
-            "success": success_status,
-        }
-    )
-
+    response["success"] = success_status
     # replace "base" with "from" in the response key
     response["from"] = response.pop("base")
     # replace "rates" with "to" in the response key
