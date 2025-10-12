@@ -3,6 +3,7 @@ from waitress import serve
 from datetime import datetime, timezone
 import useful_functions as uf
 from requests import HTTPError, ConnectionError, Timeout, RequestException
+import standard_responses as sr
 
 """
 endpoints 
@@ -102,24 +103,26 @@ def convert_currency():
         "symbols": to_currency,
         "amount": amount if amount is not None else 1,
     }
-    # Lets consume the FrankFurter API to get real-time information on the conversion from one currency to another
+    # Lets try to consume the FrankFurter API to get real-time information on the conversion from one currency to another
     try:
         response = uf.consume_frankfurter_api(f"/v1/{date}", url_params)
 
-        response = uf.format_frankfurter_response(response, True)
+        # replacing the "base" dict key with "from" in the response
+        response["from"] = response.pop("base")
+        # replacing the "rates" dict key with "to" in the response
+        response["to"] = response.pop("rates")
+
+        # Padronizing the response
+        response = sr.StandardAPISuccessfulResponse(data=response).to_dict()
 
         return jsonify(response)
 
-    except HTTPError as http_err:
-        return jsonify({"success": False, "error_message": str(http_err)})
+    except RequestException as err:
+        error_message = sr.StandardAPIErrorMessage(
+            http_error_code=err.response.status_code, error_message=str(err)
+        ).to_dict()
 
-    except ConnectionError as conn_err:
-        print(f"Connection error occurred: {conn_err}")
-    except Timeout as timeout_err:
-        # The server didn't respond in less than 10 seconds
-        print(f"Timeout error occurred: {timeout_err}")
-    except RequestException as general_err:
-        print(f"An error occured: {general_err}")
+        return jsonify(error_message), err.response.status_code
 
 
 app.run(port=5000, host="localhost", debug=True)

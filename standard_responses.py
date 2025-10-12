@@ -1,11 +1,14 @@
 class StandardAPIErrorMessage:
-    def __init__(self, http_error_code: int, error_reason: str, error_explanation: str):
+    def __init__(
+        self,
+        http_error_code: int,
+        error_message: str,
+    ):
         self.message = {
             "success": False,
             "error": {
                 "code": http_error_code,
-                "error_reason": error_reason,
-                "explanation": error_explanation,
+                "message": error_message,
             },
         }
 

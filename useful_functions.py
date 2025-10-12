@@ -97,18 +97,3 @@ def get_formatted_date(str_date: str) -> str:
         formatted_date = datetime.datetime.strptime(str_date, "%d-%m-%Y")
 
     return formatted_date.date().isoformat()
-
-
-def format_frankfurter_response(api_response: dict, success_status: bool):
-    """
-    The purpose of this function is to customize the frankfurter API responses by adding
-    our default information and also changing some response parameters.
-    """
-    # replace the dict key "base" with "from" in the api_response
-    api_response["from"] = api_response.pop("base")
-    # replace the dict key "rates" with "to" in the api_response
-    api_response["to"] = api_response.pop("rates")
-
-    formatted_response = sr.StandardAPISuccessfulResponse(data=api_response).to_dict()
-
-    return formatted_response
