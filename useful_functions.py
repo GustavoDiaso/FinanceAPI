@@ -1,6 +1,8 @@
 import requests
 import datetime
 from functools import lru_cache, cache
+import exceptions
+import standard_responses as sr
 
 # External API will use
 FRANKFURTER_BASE_URL = "https://api.frankfurter.dev"
@@ -9,6 +11,7 @@ FRANKFURTER_BASE_URL = "https://api.frankfurter.dev"
 session = requests.Session()
 
 
+# @lru_cache(maxsize=10)
 def consume_frankfurter_api(
     endpoint: str, params: dict = None, http_session: requests.Session = session
 ) -> dict | None:
@@ -25,17 +28,6 @@ def consume_frankfurter_api(
     response.raise_for_status()
 
     return response.json()
-
-    # except requests.HTTPError as http_err:
-    #     # the HTTP status of the response was between 400-600
-    #     print(f"HTTP error occurred: {http_err}")
-    # except requests.ConnectionError as conn_err:
-    #     print(f"Connection error occurred: {conn_err}")
-    # except requests.Timeout as timeout_err:
-    #     # The server didn't respond in less than 10 seconds
-    #     print(f"Timeout error occurred: {timeout_err}")
-    # except requests.RequestException as general_err:
-    #     print(f"An error occured: {general_err}")
 
 
 # print(consume_frankfurter_api("v1/latest", {'base': 'USD', 'symbols': 'EUR'}))
@@ -95,15 +87,9 @@ def date_is_real(str_date: str) -> bool:
     return False
 
 
-class NonExistentDateError(ValueError):
-    """This error object will be raised when the Date passed to our get_formatted_date function does not exist"""
-
-    pass
-
-
 def get_formatted_date(str_date: str) -> str:
     if not date_is_real(str_date):
-        raise NonExistentDateError("The given date does not exist")
+        raise exceptions.NonExistentDateError("The given date does not exist")
 
     try:
         formatted_date = datetime.datetime.strptime(str_date, "%Y-%m-%d")
@@ -113,14 +99,16 @@ def get_formatted_date(str_date: str) -> str:
     return formatted_date.date().isoformat()
 
 
-def standardize_frankfurter_response(response: dict, success_status: bool):
+def format_frankfurter_response(api_response: dict, success_status: bool):
     """
     The purpose of this function is to customize the frankfurter API responses by adding
     our default information and also changing some response parameters.
     """
-    # Lets add the success status to the frankfurters' response
-    response["success"] = success_status
-    # replace "base" with "from" in the response key
-    response["from"] = response.pop("base")
-    # replace "rates" with "to" in the response key
-    response["to"] = response.pop("rates")
+    # replace the dict key "base" with "from" in the api_response
+    api_response["from"] = api_response.pop("base")
+    # replace the dict key "rates" with "to" in the api_response
+    api_response["to"] = api_response.pop("rates")
+
+    formatted_response = sr.StandardAPISuccessfulResponse(data=api_response).to_dict()
+
+    return formatted_response
