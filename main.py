@@ -4,12 +4,22 @@ import useful_functions as uf
 from requests import RequestException
 import standard_responses as sr
 import custom_exceptions
+from flask_caching import Cache
 
 """
 HTML response status for reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status
 """
+configurations = {
+    "DEBUG": True,
+    "CACHE_TYPE": "SimpleCache",
+    "CACHE_DELFAULT_TIMEOUT": 300
+}
 
 app = Flask(__name__)
+
+app.config.from_mapping(configurations)
+
+cache = Cache(app)
 
 # -------- Existing routes ---------- #
 
@@ -23,6 +33,7 @@ def api_basic_information():
     )
 
 @app.route("/v1/historical", methods=['GET'])
+@cache.cached(query_string=True)
 def historical_conversion():
     """Converts a given amount of one currency to another on a specific date"""
 
@@ -79,6 +90,7 @@ def historical_conversion():
 
 
 @app.route('/v1/interval', methods=['GET'])
+@cache.cached(query_string=True)
 def date_interval_conversion():
     """Converts a given amount of one currency to another within a given date range"""
 
