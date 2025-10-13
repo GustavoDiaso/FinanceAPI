@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 import custom_exceptions
 
 # External API will use
@@ -27,8 +27,25 @@ def consume_frankfurter_api(
     return response.json()
 
 
-# print(consume_frankfurter_api("v1/latest", {'base': 'USD', 'symbols': 'EUR'}))
-
+def get_api_basic_info() -> dict:
+     return {
+        "api_name": "Currency API",
+        "description": "A simple API to get real-time and historical currency quotes.",
+        "author": "Gustavo Henrique de Oliveira Dias",
+        "contact": {
+            "github": "https://github.com/GustavoDiaso",
+            "linkedin": "https://www.linkedin.com/in/gustavodiaso",
+        },
+        "server_time_utc": datetime.now(timezone.utc).isoformat(),
+        "getting_started": {
+            "example_endpoints": [
+                "/v1/currencies",
+                "/v1/historical?from=USD&to=BRL&amount=1",
+                "/v1/historical?from=USD&to=BRL&amount=1&date=2025-10-12",
+                "/v1/interval?from=USD&to=BRL&start_date=2025-01-09&end_date=2025-02-09"
+            ]
+        }
+    }
 
 def get_existing_currencies() -> dict:
     return {
@@ -133,7 +150,7 @@ def validate_historical_endpoint_params(request):
 
 
 def validate_interval_endpoint_params(request):
-    
+
     from_currency = request.args.get("from") or 'USD'
     to_currencies = request.args.get("to")
     amount = request.args.get("amount") or '1'

@@ -1,6 +1,5 @@
 from flask import Flask, jsonify, request
 from waitress import serve
-from datetime import datetime, timezone
 import useful_functions as uf
 from requests import RequestException
 import standard_responses as sr
@@ -16,27 +15,12 @@ app = Flask(__name__)
 
 @app.route("/")
 def api_basic_information():
-    api_basic_info = {
-        "success": True,
-        "api_name": "Currency API",
-        "description": "A simple API to get real-time and historical currency quotes.",
-        "author": "Gustavo Henrique de Oliveira Dias",
-        "contact": {
-            "github": "https://github.com/GustavoDiaso",
-            "linkedin": "https://www.linkedin.com/in/gustavodiaso",
-        },
-        "server_time_utc": datetime.now(timezone.utc).isoformat(),
-        "getting_started": {
-            "example_endpoints": [
-                "/v1/currencies",
-                "/v1/historical?from=USD&to=BRL&amount=1",
-                "/v1/historical?from=USD&to=BRL&amount=1&date=2025-10-12",
-                "/v1/interval?from=USD&to=BRL&start_date=2025-01-09&end_date=2025-02-09"
-            ]
-        },
-    }
-    return jsonify(api_basic_info), 200
-
+    return (
+        jsonify(
+            sr.StandardAPISuccessfulResponse(data=uf.get_api_basic_info()).to_dict()
+        ),
+        200
+    )
 
 @app.route("/v1/historical", methods=['GET'])
 def historical_conversion():
