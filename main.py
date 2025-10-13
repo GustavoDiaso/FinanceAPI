@@ -12,7 +12,7 @@ HTML response status for reference: https://developer.mozilla.org/en-US/docs/Web
 
 app = Flask(__name__)
 
-# -------- Exising routes ---------- #
+# -------- Existing routes ---------- #
 
 @app.route("/")
 def api_basic_information():
@@ -28,8 +28,10 @@ def api_basic_information():
         "server_time_utc": datetime.now(timezone.utc).isoformat(),
         "getting_started": {
             "example_endpoints": [
+                "/v1/currencies",
                 "/v1/historical?from=USD&to=BRL&amount=1",
                 "/v1/historical?from=USD&to=BRL&amount=1&date=2025-10-12",
+                "/v1/interval?from=USD&to=BRL&start_date=2025-01-09&end_date=2025-02-09"
             ]
         },
     }
@@ -40,92 +42,45 @@ def api_basic_information():
 def historical_conversion():
     """Converts a given amount of one currency to another on a specific date"""
 
-    from_currency = request.args.get("from")
-    to_currencies = request.args.get("to")
-    amount = request.args.get("amount")
-    date = request.args.get("date")
-
-    # Verifying if all the mandatory URL parameters were passed
-    if from_currency:
-
-        # If the date is not passed, use the current date. If the date is passed, verify if it's valid and put it in the
-        # correct format YYYY-MM-DD
-        if date is None:
-            date = datetime.now().date().isoformat()
-        else:
-            try:
-                date = uf.get_formatted_date(date)
-            except custom_exceptions.NonExistentDateError:
-                return (
-                    jsonify(
-                        sr.StandardAPIErrorMessage(
-                            http_error_code=400,
-                            error_message=f"The date {date} does not exist"
-                        ).to_dict()
-                    ),
-                    400
-                )
-
-        # If the 'from' currency does not exist, raise an error
-        if uf.currency_exists(from_currency) == False:
-            return (
-                jsonify(
-                   sr.StandardAPIErrorMessage(
-                       http_error_code=400,
-                       error_message= f"The following currency does not exist: {from_currency}"
-                   ).to_dict()
-                ),
-                400
-            )
-
-        # First, check if the user wants a conversion to all currencies (to_currencies = None).
-        # If not, verifies if each currency passed is valid. If so, everything is ok, if not, return an error message
-        if to_currencies is not None:
-            for currency in to_currencies.split(','):
-                if uf.currency_exists(currency) == False:
-                    return (
-                        jsonify(
-                            sr.StandardAPIErrorMessage(
-                                http_error_code=400,
-                                error_message=f"The following currency does not exist: {currency}"
-                            ).to_dict()
-                        ),
-                        400
-                    )
-
-    else:
+    try:
+        # This function validates the URL parameters passed in the request and returns them pre-formatted so they can be
+        # processed. If any passed parameter doesn't match what was expected, the function raises an error.
+        params = uf.validate_historical_endpoint_params(request)
+    except custom_exceptions.BadRequestError as err:
         return (
             jsonify(
-                sr.StandardAPIErrorMessage(
-                    http_error_code=400,
-                    error_message= 'The ULR parameter "from" is mandatory'
-                ).to_dict()
+               sr.StandardAPIErrorMessage(
+                   http_error_code=400,
+                   error_message=str(err)
+               ).to_dict()
             ),
-            400,
+            400
         )
 
-    # Defining the URL parameters which will be used to send a request to FrankFurter API
-    url_params = {
-        "base": from_currency,
-        "symbols": to_currencies,
-        "amount": amount if amount is not None else 1,
-    }
-    if to_currencies is None:
-        url_params.pop('symbols')
-
-    # Lets try to consume the FrankFurter API to get real-time information on the conversion from one currency to another
+    #Lets try to consume the FrankFurter API to get real-time information on the conversion from one currency to another
     try:
-        response = uf.consume_frankfurter_api(f"/v1/{date}", url_params)
+        # Defining the URL parameters which will be used to send a request to FrankFurter API
+        url_params = {
+            "base": params['from_currency'],
+            "symbols": params['to_currencies'],
+            "amount": params['amount'],
+        }
+        if url_params['symbols'] is None:
+            url_params.pop('symbols')
+
+        response = uf.consume_frankfurter_api(f"/v1/{params['date']}", url_params)
 
         # replacing the "base" dict key with "from" in the response
         response["from"] = response.pop("base")
         # replacing the "rates" dict key with "to" in the response
         response["to"] = response.pop("rates")
 
-        # Padronizing the response
-        response = sr.StandardAPISuccessfulResponse(data=response).to_dict()
-
-        return jsonify(response)
+        # Returning the padronized response
+        return (
+            jsonify(
+                sr.StandardAPISuccessfulResponse(data=response).to_dict()
+            ), 200
+        )
 
     except RequestException as err:
         return (
@@ -143,92 +98,45 @@ def historical_conversion():
 def date_interval_conversion():
     """Converts a given amount of one currency to another within a given date range"""
 
-    from_currency = request.args.get("from")
-    to_currencies = request.args.get("to")
-    amount = request.args.get("amount")
-    start_date = request.args.get("start_date")
-    end_date = request.args.get("end_date")
-    date_interval = [start_date, end_date]
-
-    # Verifying if all the mandatory URL parameters were passed
-    if from_currency:
-
-        for i in range(0,2):
-            if date_interval[i] is None:
-                date_interval[i] = datetime.now().date().isoformat()
-            else:
-                try:
-                    date_interval[i] = uf.get_formatted_date(date_interval[i])
-                except custom_exceptions.NonExistentDateError:
-                    return (
-                        jsonify(
-                            sr.StandardAPIErrorMessage(
-                                http_error_code=400,
-                                error_message=f"The date {date_interval[i]} does not exist"
-                            ).to_dict()
-                        ),
-                        400
-                    )
-
-        # If the 'from' currency does not exist, raise an error
-        if uf.currency_exists(from_currency) == False:
-            return (
-                jsonify(
-                    sr.StandardAPIErrorMessage(
-                        http_error_code=400,
-                        error_message=f"The following currency does not exist: {from_currency}"
-                    ).to_dict()
-                ),
-                400
-            )
-
-        # First, check if the user wants a conversion to all currencies (to_currencies = None).
-        # If not, verifies if each currency passed is valid. If so, everything is ok, if not, return an error message
-        if to_currencies is not None:
-            for currency in to_currencies.split(','):
-                if uf.currency_exists(currency) == False:
-                    return (
-                        jsonify(
-                            sr.StandardAPIErrorMessage(
-                                http_error_code=400,
-                                error_message=f"The following currency does not exist: {currency}"
-                            ).to_dict()
-                        ),
-                        400
-                    )
-
-    else:
+    try:
+        # This function validates the URL parameters passed in the request and returns them pre-formatted so they can be
+        # processed. If any passed parameter doesn't match what was expected, the function raises an error.
+        params = uf.validate_interval_endpoint_params(request)
+    except custom_exceptions.BadRequestError as err:
         return (
             jsonify(
                 sr.StandardAPIErrorMessage(
                     http_error_code=400,
-                    error_message='The URL parameter "from" is mandatory'
+                    error_message=str(err)
                 ).to_dict()
             ),
-            400,
+            400
         )
 
-    url_params = {
-        "base": from_currency,
-        "symbols": to_currencies,
-        "amount": amount if amount is not None else 1,
-    }
-    if to_currencies is None:
-        url_params.pop('symbols')
-
-    # Lets try to consume the FrankFurter API to get real-time information on the conversion from one currency to another
+    #Lets try to consume the FrankFurter API to get real-time information on the conversion from one currency to another
     try:
-        response = uf.consume_frankfurter_api(f"/v1/{date_interval[0]}..{date_interval[1]}", url_params)
+        url_params = {
+            "base": params['from_currency'],
+            "symbols": params['to_currencies'],
+            "amount": params['amount'],
+        }
+        if url_params['symbols'] is None:
+            url_params.pop('symbols')
+
+        response = uf.consume_frankfurter_api(f"/v1/{params['start_date']}..{params['end_date']}", url_params)
 
         # replacing the "base" dict key with "from" in the response
         response["from"] = response.pop("base")
         # replacing the "rates" dict key with "to" in the response
         response["to"] = response.pop("rates")
 
-        # Padronizing the response
-        response = sr.StandardAPISuccessfulResponse(data=response).to_dict()
-
-        return jsonify(response)
+        # Returning the padronized response
+        return (
+            jsonify(
+                sr.StandardAPISuccessfulResponse(data=response).to_dict()
+            ),
+            200
+        )
 
     except RequestException as err:
         return (
@@ -240,6 +148,17 @@ def date_interval_conversion():
             ),
             err.response.status_code
         )
+
+@app.route('/v1/currencies', methods=['GET'])
+def get_currencies():
+    return (
+        jsonify(
+            sr.StandardAPISuccessfulResponse(data=uf.get_existing_currencies()).to_dict()
+        ),
+        200
+    )
+
+# -------- Handling errors ---------- #
 
 @app.errorhandler(404)
 def not_found_error_handler(err):
