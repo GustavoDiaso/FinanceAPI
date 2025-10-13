@@ -1,8 +1,6 @@
 import requests
 import datetime
-from functools import lru_cache, cache
-import exceptions
-import standard_responses as sr
+import custom_exceptions
 
 # External API will use
 FRANKFURTER_BASE_URL = "https://api.frankfurter.dev"
@@ -11,7 +9,6 @@ FRANKFURTER_BASE_URL = "https://api.frankfurter.dev"
 session = requests.Session()
 
 
-# @lru_cache(maxsize=10)
 def consume_frankfurter_api(
     endpoint: str, params: dict = None, http_session: requests.Session = session
 ) -> dict | None:
@@ -89,7 +86,7 @@ def date_is_real(str_date: str) -> bool:
 
 def get_formatted_date(str_date: str) -> str:
     if not date_is_real(str_date):
-        raise exceptions.NonExistentDateError("The given date does not exist")
+        raise custom_exceptions.NonExistentDateError("The given date does not exist")
 
     try:
         formatted_date = datetime.datetime.strptime(str_date, "%Y-%m-%d")
