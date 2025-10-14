@@ -1,9 +1,17 @@
 import requests
 from datetime import datetime, timezone
 import custom_exceptions
+from dotenv import load_dotenv
+from pathlib import Path
+import os
 
-# External API will use
-FRANKFURTER_BASE_URL = "https://api.frankfurter.dev"
+#loading the enviormental variables
+DOTENV_PATH = Path(__file__).parent / '.env'
+load_dotenv(str(DOTENV_PATH))
+
+# External APIs will use
+FRANKFURTER_API_BASE_URL = "https://api.frankfurter.dev"
+BRAPI_API_BASE_URL = "https://brapi.dev/api"
 
 # Establishing our http session to send requests
 session = requests.Session()
@@ -16,7 +24,7 @@ def consume_frankfurter_api(
     if endpoint[0] != "/":
         endpoint = "/" + endpoint
 
-    url = f"{FRANKFURTER_BASE_URL}{endpoint}"
+    url = f"{FRANKFURTER_API_BASE_URL}{endpoint}"
 
     # Consuming the API
     response = http_session.get(url, params=params, timeout=10)
@@ -185,3 +193,63 @@ def validate_interval_endpoint_params(request):
         'start_date': start_date,
         'end_date': end_date,
     }
+
+
+def consume_brapi_api(endpoint: str, params: dict, http_session: requests.Session = session) -> dict|None:
+    # Just making sure the first char in the endpoint str is a /
+    if endpoint[0] != "/":
+        endpoint = "/" + endpoint
+
+    url = f"{BRAPI_API_BASE_URL}{endpoint}"
+
+    # Consuming the API
+    response = http_session.get(
+        url=url,
+        params=params,
+        timeout=10,
+        headers={"Authorization": f"Bearer {os.environ['BRAPI_API_KEY']}"}
+    )
+
+    # automatically raises an exception if the HTTPS request returned an unsuccessful status code
+    response.raise_for_status()
+
+    return response.json()
+
+
+def validate_quotes_endpoint_params(request) -> dict:
+    tickers = request.args.get('tickers')
+    analysis_time_range = request.args.get('range') or '1d'
+    interval_between_quotations = request.args.get('interval') or '1m'
+
+    # This parameter tells whether users want to include basic fundamental data such as  PE (Price-to-Earnings ratio)
+    # and EPS (Earnings Per Share) in the response
+    fundamental_data = request.args.get('fundamental')
+
+    # This parameter tells whether users want to include information about dividends and interest
+    # on equity historically paid by the asset in the response.
+    dividends = request.args.get('dividends')
+
+    # -- Verifications --#
+    if not tickers:
+        raise custom_exceptions.BadRequestError(
+            "At least one stock ticker must be specified. Exemples: PETR3, GOLL54"
+        )
+
+    if not fundamental_data:
+        fundamental_data = True
+
+    if not dividends:
+        dividends = True
+
+
+    return {
+        'tickers': tickers,
+        'analysis_time_range': analysis_time_range,
+        'interval_between_quotations': interval_between_quotations,
+        'fundamental_data': fundamental_data,
+        'dividends': dividends
+    }
+
+
+if __name__ == '__main__':
+    print(os.environ['BRAPI_API_KEY'])

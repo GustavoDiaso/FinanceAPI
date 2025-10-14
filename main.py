@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, request_tearing_down
 #from waitress import serve
 import useful_functions as uf
 from requests import RequestException
@@ -153,6 +153,56 @@ def get_currencies():
         ),
         200
     )
+
+@app.route('/v1/b3stocks/quotes', methods=['GET'])
+@cache.cached(timeout=900, query_string=True) # caching the quote results for 15 mintues. This is not a DayTrade API
+def get_b3stocks_quotes():
+
+    try:
+        # This function validates the URL parameters passed in the request and returns them pre-formatted so they can be
+        # processed. If any passed parameter doesn't match what was expected, the function raises an error.
+        params = uf.validate_quotes_endpoint_params(request)
+
+    except custom_exceptions.BadRequestError as err:
+        return (
+            jsonify(
+                sr.StandardAPIErrorMessage(
+                    http_error_code=400,
+                    error_message=str(err)
+                ).to_dict()
+            ),
+            400
+        )
+
+    try:
+        url_params = {
+            'range': params['analysis_time_range'],
+            'interval': params['interval_between_quotations'],
+            'fundamental': params['fundamental_data'],
+            'dividends': params['dividends']
+        }
+        response = uf.consume_brapi_api(endpoint=f"quote/{params['tickers']}", params=url_params)
+
+        return (
+            jsonify(
+                sr.StandardAPISuccessfulResponse(
+                    data=response["results"]
+                ).to_dict()
+            ),
+            200
+        )
+
+    except RequestException as err:
+        return (
+            jsonify(
+                sr.StandardAPIErrorMessage(
+                    http_error_code=err.response.status_code,
+                    error_message=str(err)
+                ).to_dict()
+            ),
+            err.response.status_code
+        )
+
 
 # -------- Handling errors ---------- #
 
