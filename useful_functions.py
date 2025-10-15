@@ -18,7 +18,7 @@ session = requests.Session()
 
 
 def consume_frankfurter_api(
-    endpoint: str, params: dict = None, http_session: requests.Session = session
+    endpoint: str, params: dict | None = None, http_session: requests.Session = session
 ) -> dict | None:
     # Just making sure the first char in the endpoint str is a /
     if endpoint[0] != "/":
@@ -195,7 +195,10 @@ def validate_interval_endpoint_params(request):
     }
 
 
-def consume_brapi_api(endpoint: str, params: dict, http_session: requests.Session = session) -> dict|None:
+def consume_brapi_api(
+        endpoint: str, params: dict | None = None, http_session: requests.Session = session
+) -> dict|None:
+
     # Just making sure the first char in the endpoint str is a /
     if endpoint[0] != "/":
         endpoint = "/" + endpoint
@@ -219,7 +222,7 @@ def consume_brapi_api(endpoint: str, params: dict, http_session: requests.Sessio
 def validate_quotes_endpoint_params(request) -> dict:
     tickers = request.args.get('tickers')
     analysis_time_range = request.args.get('range') or '1d'
-    interval_between_quotations = request.args.get('interval') or '1m'
+    interval_between_quotations = request.args.get('interval') or '1d'
 
     # This parameter tells whether users want to include basic fundamental data such as  PE (Price-to-Earnings ratio)
     # and EPS (Earnings Per Share) in the response
@@ -236,11 +239,26 @@ def validate_quotes_endpoint_params(request) -> dict:
         )
 
     if not fundamental_data:
-        fundamental_data = True
+        fundamental_data = 'false'
+    elif fundamental_data not in ['true', 'false']:
+        raise custom_exceptions.BadRequestError(
+            "The 'fundamental' parameter only accepts true or false as a value"
+        )
 
     if not dividends:
-        dividends = True
+        dividends = 'false'
+    elif dividends not in ['true', 'false']:
+        raise custom_exceptions.BadRequestError(
+            "The 'dividens' parameter only accepts true or false as a value"
+        )
 
+    if len(tickers.split(',')) > 1:
+        if fundamental_data == 'true' and dividends== 'true':
+            raise custom_exceptions.BadRequestError(
+                "You can only request fundamental and dividend data for one stock at a time."
+            )
+
+    # -- If all verifications passed, then return a dictionary containing the URL parameters formatted and ready to use
 
     return {
         'tickers': tickers,
@@ -250,6 +268,7 @@ def validate_quotes_endpoint_params(request) -> dict:
         'dividends': dividends
     }
 
+def validate_stocksinfo_endpoint_params(request) -> dict:
 
 if __name__ == '__main__':
     print(os.environ['BRAPI_API_KEY'])

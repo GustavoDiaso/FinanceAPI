@@ -154,7 +154,33 @@ def get_currencies():
         200
     )
 
-@app.route('/v1/b3stocks/quotes', methods=['GET'])
+@app.route('/v1/b3stocks/all', methods=['GET'])
+@cache.cached(timeout=900, query_string=True)
+def get_all_b3stocks():
+    try:
+        response = uf.consume_brapi_api(endpoint=f"/available")
+
+        return (
+            jsonify(
+                sr.StandardAPISuccessfulResponse(
+                    data=response["stocks"]
+                ).to_dict()
+            ),
+            200
+        )
+
+    except RequestException as err:
+        return (
+            jsonify(
+                sr.StandardAPIErrorMessage(
+                    http_error_code=err.response.status_code,
+                    error_message=str(err)
+                ).to_dict()
+            ),
+            err.response.status_code
+        )
+
+@app.route('/v1/b3stocks/quote', methods=['GET'])
 @cache.cached(timeout=900, query_string=True) # caching the quote results for 15 mintues. This is not a DayTrade API
 def get_b3stocks_quotes():
 
@@ -202,6 +228,24 @@ def get_b3stocks_quotes():
             ),
             err.response.status_code
         )
+
+@app.route('/v1/b3stocks/stocksinfo', methods=['GET'])
+@cache.cached(timeout=900, query_string=True) # caching the quote results for 15 mintues. This is not a DayTrade API
+def get_b3stocks_information():
+
+    # stock market sector
+    sector = request.args.get('sector')
+
+    # sortedBy determines the field by which the stocks will be sorted
+    sortedBy = request.args.get('sortedBy') or 'name'
+
+    # sortOrder determines the order in which the sorted stocks will appear in the answer.
+    # Smallest to largest, bottom to top : asc
+    # largest to smallest, top to bottom: desc
+    sortOrder = request.args.get('sortOrder') or 'asc'
+
+    # limits the number of stocks that will be shown in the response at the same time
+    limit = request.args.get('limit')
 
 
 # -------- Handling errors ---------- #
