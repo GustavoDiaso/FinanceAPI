@@ -32,14 +32,15 @@ def api_basic_information():
         200
     )
 
-@app.route("/v1/historical", methods=['GET'])
+@app.route("/v1/conversion/historical", methods=['GET'])
 @cache.cached(query_string=True)
 def historical_conversion():
     """Converts a given amount of one currency to another on a specific date"""
 
     try:
-        # This function validates the URL parameters passed in the request and returns them pre-formatted so they can be
-        # processed. If any passed parameter doesn't match what was expected, the function raises an error.
+        # This function validates the URL parameters passed in the request to the historical endpoin and returns them
+        # pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
+        # the function raises an error.
         params = uf.validate_historical_endpoint_params(request)
     except custom_exceptions.BadRequestError as err:
         return (
@@ -60,10 +61,12 @@ def historical_conversion():
             "symbols": params['to_currencies'],
             "amount": params['amount'],
         }
-        if url_params['symbols'] is None:
-            url_params.pop('symbols')
 
-        response = uf.consume_frankfurter_api(f"/v1/{params['date']}", url_params)
+        #  Only the parameters different than None will be passed to the FrankFurter API request
+        response = uf.consume_frankfurter_api(
+            endpoint=f"/v1/{params['date']}",
+            params={key: value for key, value in url_params.items() if value is not None}
+        )
 
         # replacing the "base" dict key with "from" in the response
         response["from"] = response.pop("base")
@@ -89,15 +92,17 @@ def historical_conversion():
         )
 
 
-@app.route('/v1/interval', methods=['GET'])
+@app.route('/v1/conversion/interval', methods=['GET'])
 @cache.cached(query_string=True)
 def date_interval_conversion():
     """Converts a given amount of one currency to another within a given date range"""
 
     try:
-        # This function validates the URL parameters passed in the request and returns them pre-formatted so they can be
-        # processed. If any passed parameter doesn't match what was expected, the function raises an error.
+        # This function validates the URL parameters passed in the request to the interval endpoin and returns them
+        # pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
+        # the function raises an error.
         params = uf.validate_interval_endpoint_params(request)
+
     except custom_exceptions.BadRequestError as err:
         return (
             jsonify(
@@ -116,10 +121,12 @@ def date_interval_conversion():
             "symbols": params['to_currencies'],
             "amount": params['amount'],
         }
-        if url_params['symbols'] is None:
-            url_params.pop('symbols')
 
-        response = uf.consume_frankfurter_api(f"/v1/{params['start_date']}..{params['end_date']}", url_params)
+        #  Only the parameters different than None will be passed to the FrankFurter API request
+        response = uf.consume_frankfurter_api(
+            endpoint=f"/v1/{params['start_date']}..{params['end_date']}",
+            params={key: value for key, value in url_params.items() if value is not None}
+        )
 
         # replacing the "base" dict key with "from" in the response
         response["from"] = response.pop("base")
@@ -185,8 +192,9 @@ def get_all_b3stocks():
 def get_b3stocks_quotes():
 
     try:
-        # This function validates the URL parameters passed in the request and returns them pre-formatted so they can be
-        # processed. If any passed parameter doesn't match what was expected, the function raises an error.
+        # This function validates the URL parameters passed in the request to the quote endpoin and returns them
+        # pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
+        # the function raises an error.
         params = uf.validate_quotes_endpoint_params(request)
 
     except custom_exceptions.BadRequestError as err:
@@ -207,7 +215,10 @@ def get_b3stocks_quotes():
             'fundamental': params['fundamental_data'],
             'dividends': params['dividends']
         }
-        response = uf.consume_brapi_api(endpoint=f"quote/{params['tickers']}", params=url_params)
+        response = uf.consume_brapi_api(
+            endpoint=f"quote/{params['ticker']}",
+            params={key: value for key, value in url_params.items() if value is not None}
+        )
 
         return (
             jsonify(
@@ -230,23 +241,61 @@ def get_b3stocks_quotes():
         )
 
 @app.route('/v1/b3stocks/stocksinfo', methods=['GET'])
-@cache.cached(timeout=900, query_string=True) # caching the quote results for 15 mintues. This is not a DayTrade API
+@cache.cached(timeout=900, query_string=True)
 def get_b3stocks_information():
+    """This function returns information about stocks traded on b3"""
+    try:
+        # This function validates the URL parameters passed in the request to the stocksinfo endpoin and returns them
+        # pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
+        # the function raises an error.
+        params = uf.validate_stocksinfo_endpoint_params(request)
 
-    # stock market sector
-    sector = request.args.get('sector')
+    except custom_exceptions.BadRequestError as err:
+        return (
+            jsonify(
+                sr.StandardAPIErrorMessage(
+                    http_error_code=400,
+                    error_message=str(err)
+                ).to_dict()
+            ),
+            400
+        )
 
-    # sortedBy determines the field by which the stocks will be sorted
-    sortedBy = request.args.get('sortedBy') or 'name'
+    try:
+        url_params = {
+            'sector': params['sector'],
+            'sortedBy': params['sortedBy'],
+            'sortOrder': params['order'],
+            'limit': params['limit'],
+            'page': params['page'],
+            'type': 'stock'
+        }
 
-    # sortOrder determines the order in which the sorted stocks will appear in the answer.
-    # Smallest to largest, bottom to top : asc
-    # largest to smallest, top to bottom: desc
-    sortOrder = request.args.get('sortOrder') or 'asc'
+        # Only the URL parameters different than None will be passed to the brapi API request
+        response = uf.consume_brapi_api(
+            endpoint='/quote/list',
+            params={key: value for key, value in url_params.items() if value is not None}
+        )
 
-    # limits the number of stocks that will be shown in the response at the same time
-    limit = request.args.get('limit')
+        return (
+            jsonify(
+                sr.StandardAPISuccessfulResponse(
+                    data=response
+                ).to_dict()
+            ),
+            200
+        )
 
+    except RequestException as err:
+        return (
+            jsonify(
+                sr.StandardAPIErrorMessage(
+                    http_error_code=err.response.status_code,
+                    error_message=str(err)
+                ).to_dict()
+            ),
+            err.response.status_code
+        )
 
 # -------- Handling errors ---------- #
 

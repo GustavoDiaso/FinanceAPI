@@ -1,9 +1,11 @@
 import requests
 from datetime import datetime, timezone
+from requests import RequestException
 import custom_exceptions
 from dotenv import load_dotenv
 from pathlib import Path
 import os
+from cachetools import cached, TTLCache
 
 #loading the enviormental variables
 DOTENV_PATH = Path(__file__).parent / '.env'
@@ -17,26 +19,8 @@ BRAPI_API_BASE_URL = "https://brapi.dev/api"
 session = requests.Session()
 
 
-def consume_frankfurter_api(
-    endpoint: str, params: dict | None = None, http_session: requests.Session = session
-) -> dict | None:
-    # Just making sure the first char in the endpoint str is a /
-    if endpoint[0] != "/":
-        endpoint = "/" + endpoint
-
-    url = f"{FRANKFURTER_API_BASE_URL}{endpoint}"
-
-    # Consuming the API
-    response = http_session.get(url, params=params, timeout=10)
-
-    # automatically raises an exception if the HTTPS request returned an unsuccessful status code
-    response.raise_for_status()
-
-    return response.json()
-
-
 def get_api_basic_info() -> dict:
-     return {
+    return {
         "api_name": "Currency API",
         "description": "A simple API to get real-time and historical currency quotes.",
         "author": "Gustavo Henrique de Oliveira Dias",
@@ -90,7 +74,6 @@ def get_existing_currencies() -> dict:
         "ZAR": "South African Rand",
     }
 
-
 def currency_exists(currency: str) -> bool:
     """Verifies if the given currency exists"""
     currencies = get_existing_currencies()
@@ -121,12 +104,29 @@ def get_formatted_date(str_date: str) -> str:
     return formatted_date.date().isoformat()
 
 
+def consume_frankfurter_api(
+    endpoint: str, params: dict | None = None, http_session: requests.Session = session
+) -> dict | None:
+    # Just making sure the first char in the endpoint str is a /
+    if endpoint[0] != "/":
+        endpoint = "/" + endpoint
+
+    url = f"{FRANKFURTER_API_BASE_URL}{endpoint}"
+
+    # Consuming the API
+    response = http_session.get(url, params=params, timeout=10)
+
+    # automatically raises an exception if the HTTPS request returned an unsuccessful status code
+    response.raise_for_status()
+
+    return response.json()
+
 def validate_historical_endpoint_params(request):
 
     from_currency = request.args.get("from") or 'USD'
     to_currencies = request.args.get("to")
     amount = request.args.get("amount") or '1'
-    date = request.args.get("date") or datetime.now().isoformat()
+    date = request.args.get("date") or datetime.now().date().isoformat()
 
     # --Validating the parameters-- #
     if not currency_exists(from_currency):
@@ -194,6 +194,37 @@ def validate_interval_endpoint_params(request):
         'end_date': end_date,
     }
 
+def get_b3_avaliable_market_sectors():
+    return {
+        "Retail Trade",
+        "Energy Minerals",
+        "Health Services",
+        "Utilities",
+        "Finance",
+        "Consumer Services",
+        "Consumer Non-Durables",
+        "Non-Energy Minerals",
+        "Commercial Services",
+        "Distribution Services",
+        "Transportation",
+        "Technology Services",
+        "Process Industries",
+        "Communications",
+        "Producer Manufacturing",
+        "Miscellaneous",
+        "Electronic Technology",
+        "Industrial Services",
+        "Health Technology",
+        "Consumer Durables",
+    }
+
+@cached(TTLCache(maxsize=1, ttl=10800))
+def get_updated_b3_traded_stocks():
+    """This function returns the tickers of all stocks traded on B3 at the present time"""
+    # Requesting the tickers to brapi API
+    response = consume_brapi_api(endpoint="/available")
+    return set(response['stocks'])
+
 
 def consume_brapi_api(
         endpoint: str, params: dict | None = None, http_session: requests.Session = session
@@ -220,7 +251,7 @@ def consume_brapi_api(
 
 
 def validate_quotes_endpoint_params(request) -> dict:
-    tickers = request.args.get('tickers')
+    ticker = request.args.get('ticker')
     analysis_time_range = request.args.get('range') or '1d'
     interval_between_quotations = request.args.get('interval') or '1d'
 
@@ -233,42 +264,107 @@ def validate_quotes_endpoint_params(request) -> dict:
     dividends = request.args.get('dividends')
 
     # -- Verifications --#
-    if not tickers:
+    if not ticker:
         raise custom_exceptions.BadRequestError(
             "At least one stock ticker must be specified. Exemples: PETR3, GOLL54"
         )
+    else:
+        try:
+            if ticker not in get_updated_b3_traded_stocks():
+                raise custom_exceptions.BadRequestError(
+                    f"The ticker '{ticker}' is not traded on B3"
+                )
+        except RequestException:
+            pass
 
-    if not fundamental_data:
-        fundamental_data = 'false'
-    elif fundamental_data not in ['true', 'false']:
+
+    if fundamental_data and fundamental_data not in ['true', 'false']:
         raise custom_exceptions.BadRequestError(
-            "The 'fundamental' parameter only accepts true or false as a value"
+            "The 'fundamental' parameter only accepts 'true' or 'false' as a value"
         )
 
-    if not dividends:
-        dividends = 'false'
-    elif dividends not in ['true', 'false']:
-        raise custom_exceptions.BadRequestError(
-            "The 'dividens' parameter only accepts true or false as a value"
-        )
 
-    if len(tickers.split(',')) > 1:
-        if fundamental_data == 'true' and dividends== 'true':
-            raise custom_exceptions.BadRequestError(
-                "You can only request fundamental and dividend data for one stock at a time."
-            )
+    if dividends and dividends not in ['true', 'false']:
+        raise custom_exceptions.BadRequestError(
+            "The 'dividens' parameter only accepts 'true' or 'false' as a value"
+        )
 
     # -- If all verifications passed, then return a dictionary containing the URL parameters formatted and ready to use
 
     return {
-        'tickers': tickers,
+        'ticker': ticker,
         'analysis_time_range': analysis_time_range,
         'interval_between_quotations': interval_between_quotations,
         'fundamental_data': fundamental_data,
         'dividends': dividends
     }
 
+
 def validate_stocksinfo_endpoint_params(request) -> dict:
+
+    # stock market sector
+    sector = request.args.get('sector')
+
+    # 'sorted_by' determines the field by which the stocks will be sorted
+    sorted_by = request.args.get('sortedBy') or 'name'
+
+    # 'order' determines the order in which the sorted stocks will appear in the response.
+    # Smallest to largest, bottom to top : asc
+    # largest to smallest, top to bottom: desc
+    order = request.args.get('order') or 'asc'
+
+    # limits the number of stocks that will be shown in the response at a time
+    limit = request.args.get('limit')
+
+    # Page number of results to be returned, considering the specified limit. Starts at 1.
+    # Ex: limit=2 sortedBy=name. Page 1: AAA, AAB . Page 2: AAC AAD
+    page = request.args.get('page') or '1'
+
+    # -- Verifications -- #
+
+    if sector:
+        available_market_sectors = get_b3_avaliable_market_sectors()
+
+        if sector not in available_market_sectors:
+            raise custom_exceptions.BadRequestError(
+                f"The sector '{sector}' does not include any group of shares traded on b3.\n" +
+                f"Available market sectors are: \n" +
+                " | ".join(available_market_sectors)
+            )
+
+    if sorted_by:
+        valid_sort_options = ["name", "close", "change", "change_abs",
+                              "volume", "market_cap_basic", "sector"]
+
+        if sorted_by not in valid_sort_options:
+            raise custom_exceptions.BadRequestError(
+                "The parameter sortedBy only accepts the following options: " +
+                ' | '.join(valid_sort_options)
+            )
+
+    if order and order not in ['asc', 'desc']:
+        raise custom_exceptions.BadRequestError(
+            "The 'order' parameter can only receive 'asc' or 'desc'"
+        )
+
+    try:
+        int(page)
+    except ValueError:
+        raise custom_exceptions.BadRequestError(f"The 'page' parameter must be a number")
+
+    if limit:
+        try:
+            int(limit)
+        except ValueError:
+            raise custom_exceptions.BadRequestError(f"The 'limit' parameter must be a number")
+
+    return {
+        'sector': sector,
+        'sortedBy': sorted_by,
+        'order': order,
+        'page': page,
+        'limit': limit
+    }
 
 if __name__ == '__main__':
     print(os.environ['BRAPI_API_KEY'])
