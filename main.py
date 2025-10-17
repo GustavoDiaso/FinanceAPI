@@ -24,7 +24,6 @@ cache = Cache(app)
 
 # -------- Existing routes ---------- #
 
-
 @app.route("/")
 def api_basic_information():
     return (
@@ -41,9 +40,7 @@ def historical_conversion():
     """Converts a given amount of one currency to another on a specific date"""
 
     try:
-        # This function validates the URL parameters passed in the request to the historical endpoin and returns them
-        # pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
-        # the function raises an error.
+        # Getting the URL parameters passed in the request to the historical endpoin pre-formatted and ready-to-use
         params = uf.validate_historical_endpoint_params(request)
     except custom_exceptions.BadRequestError as err:
         return (
@@ -97,9 +94,7 @@ def date_interval_conversion():
     """Converts a given amount of one currency to another within a given date range"""
 
     try:
-        # This function validates the URL parameters passed in the request to the interval endpoin and returns them
-        # pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
-        # the function raises an error.
+        # Getting the URL parameters passed in the request to the interval endpoin pre-formatted and ready-to-use
         params = uf.validate_interval_endpoint_params(request)
 
     except custom_exceptions.BadRequestError as err:
@@ -149,6 +144,7 @@ def date_interval_conversion():
 
 @app.route("/v1/currencies", methods=["GET"])
 def get_currencies():
+    """This function returns all the currencies we are able to convert"""
     return (
         jsonify(
             sr.StandardAPISuccessfulResponse(
@@ -160,18 +156,27 @@ def get_currencies():
 
 
 @app.route("/v1/b3stocks/all", methods=["GET"])
-@cache.cached(timeout=900, query_string=True)
 def get_all_b3stocks():
+    """This function returns the tickers of all stocks traded on B3 at the present time"""
     try:
-        response = uf.consume_brapi_api(endpoint=f"/available")
-
         return (
             jsonify(
-                sr.StandardAPISuccessfulResponse(data=response["stocks"]).to_dict()
+                sr.StandardAPISuccessfulResponse(data=uf.get_b3_traded_stocks()).to_dict()
             ),
             200,
         )
 
+    except custom_exceptions.MissingBrapiAPIKeyError as err:
+        print(str(err))
+        return (
+            jsonify(
+                sr.StandardAPIErrorMessage(
+                    http_error_code=503,
+                    error_message="This endpoint is unavailable at the moment. Please try again later.",
+                ).to_dict()
+            ),
+            503,
+        )
     except RequestException as err:
         return (
             jsonify(
@@ -188,11 +193,9 @@ def get_all_b3stocks():
     timeout=900, query_string=True
 )  # caching the quote results for 15 mintues. This is not a DayTrade API
 def get_b3stocks_quotes():
-
+    """This funtion returns the quote of a given B3 stock"""
     try:
-        # This function validates the URL parameters passed in the request to the quote endpoin and returns them
-        # pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
-        # the function raises an error.
+        # Getting the URL parameters passed in the request to the quote endpoin pre-formatted and ready-to-use
         params = uf.validate_quotes_endpoint_params(request)
 
     except custom_exceptions.BadRequestError as err:
@@ -264,9 +267,7 @@ def get_b3stocks_quotes():
 def get_b3stocks_information():
     """This function returns information about stocks traded on b3"""
     try:
-        # This function validates the URL parameters passed in the request to the stocksinfo endpoin and returns them
-        # pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
-        # the function raises an error.
+        # Getting the URL parameters passed in the request to the stocksinfo endpoin pre-formatted and ready-to-use
         params = uf.validate_stocksinfo_endpoint_params(request)
 
     except custom_exceptions.BadRequestError as err:
@@ -297,6 +298,18 @@ def get_b3stocks_information():
             },
         )
 
+        # -- adding additional informations in the response to guide the user in next requests -- #
+        response.pop("availableStockTypes")
+        response["sortByOptions"] = [
+            "name",
+            "close",
+            "change",
+            "change_abs",
+            "volume",
+            "market_cap_basic",
+            "sector"
+        ]
+
         return (jsonify(sr.StandardAPISuccessfulResponse(data=response).to_dict()), 200)
 
     except (
@@ -324,9 +337,7 @@ def get_b3stocks_information():
             err.response.status_code,
         )
 
-
 # -------- Handling errors ---------- #
-
 
 @app.errorhandler(404)
 def not_found_error_handler(err):

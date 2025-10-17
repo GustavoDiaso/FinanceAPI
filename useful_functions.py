@@ -21,20 +21,27 @@ session = requests.Session()
 
 def get_api_basic_info() -> dict:
     return {
-        "api_name": "Currency API",
+        "APIName": "Finance API",
         "description": "A simple API to get real-time and historical currency quotes.",
         "author": "Gustavo Henrique de Oliveira Dias",
         "contact": {
             "github": "https://github.com/GustavoDiaso",
             "linkedin": "https://www.linkedin.com/in/gustavodiaso",
         },
-        "server_time_utc": datetime.now(timezone.utc).isoformat(),
-        "getting_started": {
-            "example_endpoints": [
+        "externalAPISUsed": {
+            'FrankFurter API': "https://frankfurter.dev/",
+            "Brapi API": "https://brapi.dev/",
+        },
+        "serverTimeUTC": datetime.now(timezone.utc).isoformat(),
+        "gettingStarted": {
+            "exampleEndpoints": [
                 "/v1/currencies",
-                "/v1/historical?from=USD&to=BRL&amount=1",
-                "/v1/historical?from=USD&to=BRL&amount=1&date=2025-10-12",
-                "/v1/interval?from=USD&to=BRL&start_date=2025-01-09&end_date=2025-02-09",
+                "/v1/conversion/historical?from=USD&to=BRL&amount=1",
+                "/v1/conversion/historical?from=USD&to=BRL&amount=1&date=2025-10-12",
+                "/v1/conversion/interval?from=USD&to=BRL&start_date=2025-01-09&end_date=2025-02-09",
+                "/v1/b3stocks/all",
+                "/v1/b3stocks/quote?ticker=PETR3&range=5d&interval=1d",
+                "/v1/b3stocks/stocksinfo?sector=Retail+Trade&limit=10&sortedBy=volume"
             ]
         },
     }
@@ -83,6 +90,7 @@ def currency_exists(currency: str) -> bool:
 
 
 def date_is_real(str_date: str) -> bool:
+    """Checks if a given date in string format is equivalent to a real date"""
     date_formats = ["%Y-%m-%d", "%d-%m-%Y"]
     for date_format in date_formats:
         try:
@@ -95,6 +103,7 @@ def date_is_real(str_date: str) -> bool:
 
 
 def get_formatted_date(str_date: str) -> str:
+    """This function converts a given date in string format to the following pattern: %Y-%m-%d, and returns it"""
     if not date_is_real(str_date):
         raise custom_exceptions.NonExistentDateError(
             f"The following date does not exist: {str_date}"
@@ -125,8 +134,12 @@ def consume_frankfurter_api(
     return response.json()
 
 
-def validate_historical_endpoint_params(request):
-
+def validate_historical_endpoint_params(request) -> dict:
+    """
+    This function validates the URL parameters passed in the request to the historical endpoin and returns them
+    pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
+    the function raises an error.
+    """
     from_currency = request.args.get("from") or "USD"
     to_currencies = request.args.get("to")
     amount = request.args.get("amount") or "1"
@@ -166,8 +179,12 @@ def validate_historical_endpoint_params(request):
     }
 
 
-def validate_interval_endpoint_params(request):
-
+def validate_interval_endpoint_params(request) -> dict:
+    """
+    This function validates the URL parameters passed in the request to the interval endpoin and returns them
+    pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
+    the function raises an error.
+    """
     from_currency = request.args.get("from") or "USD"
     to_currencies = request.args.get("to")
     amount = request.args.get("amount") or "1"
@@ -210,7 +227,8 @@ def validate_interval_endpoint_params(request):
     }
 
 
-def get_b3_avaliable_market_sectors():
+def get_b3_avaliable_market_sectors() -> set:
+    """This function returns all market sectors of stocks traded on B3"""
     return {
         "Retail Trade",
         "Energy Minerals",
@@ -235,7 +253,8 @@ def get_b3_avaliable_market_sectors():
     }
 
 
-def validate_brapi_api_key_declaration():
+def validate_brapi_api_key_declaration() -> None:
+    """This function validates the existence of the BRAPI API KEY in the enviromental variables"""
     if "BRAPI_API_KEY" not in os.environ or not os.environ["BRAPI_API_KEY"]:
         raise custom_exceptions.MissingBrapiAPIKeyError(
             '\nThe "BRAPI_API_KEY" environment variable is missing. \n'
@@ -288,6 +307,11 @@ def get_b3_traded_stocks():
 
 
 def validate_quotes_endpoint_params(request) -> dict:
+    """
+    This function validates the URL parameters passed in the request to the quote endpoin and returns them
+    pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
+    the function raises an error.
+    """
     ticker = request.args.get("ticker")
     analysis_time_range = request.args.get("range") or "1d"
     interval_between_quotations = request.args.get("interval") or "1d"
@@ -338,6 +362,11 @@ def validate_quotes_endpoint_params(request) -> dict:
 
 
 def validate_stocksinfo_endpoint_params(request) -> dict:
+    """
+    This function validates the URL parameters passed in the request to the stocksinfo endpoin and returns them
+    pre-formatted so they can be processed. If any passed parameter doesn't match what was expected,
+    the function raises an error.
+    """
 
     # stock market sector
     sector = request.args.get("sector")
