@@ -1,30 +1,32 @@
 from flask import Flask, jsonify, request
-
-# from waitress import serve
-import useful_functions as uf
-from requests import RequestException
-import standard_responses as sr
-import custom_exceptions
 from flask_caching import Cache
+from flasgger import Swagger, swag_from
+# from waitress import serve
+from requests import RequestException
+
+# -- Personal modules -- #
+import custom_exceptions
+import useful_functions as uf
+import standard_responses as sr
+import configurations as configs
+import templates
 
 """
 HTML response status for reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status
 """
-configurations = {
-    "DEBUG": True,
-    "CACHE_TYPE": "SimpleCache",
-    "CACHE_DELFAULT_TIMEOUT": 300,
-}
-
 app = Flask(__name__)
 
-app.config.from_mapping(configurations)
+# Adding some default configs to the Flask API instance
+app.config.from_mapping(configs.default_flask_api_config)
 
 cache = Cache(app)
+
+swagger = Swagger(app, template=templates.swagger_template)
 
 # -------- Existing routes ---------- #
 
 @app.route("/")
+@swag_from("docs/api_info_endpoint.yml")
 def api_basic_information():
     return (
         jsonify(
@@ -36,6 +38,7 @@ def api_basic_information():
 
 @app.route("/v1/conversion/historical", methods=["GET"])
 @cache.cached(query_string=True)
+@swag_from("docs/conversion_historical.yml")
 def historical_conversion():
     """Converts a given amount of one currency to another on a specific date"""
 
@@ -90,6 +93,7 @@ def historical_conversion():
 
 @app.route("/v1/conversion/interval", methods=["GET"])
 @cache.cached(query_string=True)
+@swag_from("docs/conversion_interval.yml")
 def date_interval_conversion():
     """Converts a given amount of one currency to another within a given date range"""
 
@@ -143,6 +147,7 @@ def date_interval_conversion():
 
 
 @app.route("/v1/currencies", methods=["GET"])
+@swag_from("docs/currencies.yml")
 def get_currencies():
     """This function returns all the currencies we are able to convert"""
     return (
@@ -156,6 +161,7 @@ def get_currencies():
 
 
 @app.route("/v1/b3stocks/all", methods=["GET"])
+@swag_from("docs/b3stocks_all.yml")
 def get_all_b3stocks():
     """This function returns the tickers of all stocks traded on B3 at the present time"""
     try:
@@ -189,9 +195,8 @@ def get_all_b3stocks():
 
 
 @app.route("/v1/b3stocks/quote", methods=["GET"])
-@cache.cached(
-    timeout=900, query_string=True
-)  # caching the quote results for 15 mintues. This is not a DayTrade API
+@cache.cached(timeout=900, query_string=True)  # caching the quote results for 15 mintues. This is not a DayTrade API
+@swag_from("docs/b3stocks_quote.yml")
 def get_b3stocks_quotes():
     """This funtion returns the quote of a given B3 stock"""
     try:
@@ -264,6 +269,7 @@ def get_b3stocks_quotes():
 
 @app.route("/v1/b3stocks/stocksinfo", methods=["GET"])
 @cache.cached(timeout=900, query_string=True)
+@swag_from("docs/b3stocks_stocksinfo.yml")
 def get_b3stocks_information():
     """This function returns information about stocks traded on b3"""
     try:

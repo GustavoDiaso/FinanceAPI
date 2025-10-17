@@ -1,0 +1,40 @@
+tags:
+  - Currency Conversion
+
+summary: Converts a given amount of one currency to another on a specific date.
+
+parameters:
+  - name: from
+    in: path
+    type: string
+    required: false
+    default: "USD"
+    description: The currency that will serve as the basis for the conversions
+
+  - name: to
+    in: path
+    type: string
+    required: false
+    description: The currencies that will be compared with the base currency
+
+  - name: amount
+    in: path
+    type: int
+    required: false
+    default: "1"
+    description: The amount of currencies to be compared
+
+  - name: date
+    in: path
+    type: string
+    required: false
+    default: The current date
+    description: The date of conversion
+
+responses:
+  '200':
+    description: Conversion returned with success
+
+  '400':
+    description: A certain URL parameter was passed incorrectly
+

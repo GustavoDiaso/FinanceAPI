@@ -1,0 +1,9 @@
+tags:
+  - Currency Conversion
+
+summary: Returns all the currencies our API is able to convert.
+
+responses:
+  '200':
+    description: All currencies returned with success
+

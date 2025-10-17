@@ -1,0 +1,8 @@
+tags:
+  - B3 Stocks
+
+summary: Returns the tickers of all stocks traded on B3 at the present time.
+
+responses:
+  '200':
+    description: All tickers returned with success

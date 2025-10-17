@@ -1,0 +1,64 @@
+tags:
+  - B3 Stocks
+
+summary: Returns information about stocks traded on b3.
+
+parameters:
+  - name: sector
+    in: path
+    type: string
+    required: false
+    description: stock market sector
+    enum:
+      - 'Retail Trade | Energy Minerals | Health Services | Utilities | Finance | Consumer Services | 
+      Consumer Non-Durables | Non-Energy Minerals | Commercial Services | Distribution Services | 
+      Transportation" | Technology Services | Process Industries | Communications" | Producer Manufacturing | 
+      Miscellaneous" | Electronic Technology | Industrial Services | Health Technology | Consumer Durables'
+
+
+  - name: sortedBy
+    in: path
+    type: string
+    required: false
+    default: 'name'
+    description: The field by which the stocks will be sorted
+    enum:
+      - 'name'
+      - 'close'
+      - 'change'
+      - 'change_abs'
+      - 'volume'
+      - 'market_cap_basic'
+      - 'sector'
+
+  - name: order
+    in: path
+    type: string
+    required: false
+    default: "asc"
+    description: The order in which the sorted stocks will appear in the response (asc or desc)
+    enum:
+      - 'asc'
+      - 'desc'
+
+  - name: limit
+    in: path
+    type: int
+    required: false
+    description: The number of stocks that will be shown in the response at a time
+
+  - name: page
+    in: path
+    type: int
+    required: false
+    description: Page number of results to be returned, considering the specified limit. Starts at 1.
+
+responses:
+  '200':
+    description: Stocks information returned with success
+
+  '400':
+    description: A certain URL parameter was passed incorrectly
+
+  '503':
+    description: The endpoint is unavailable at the moment.

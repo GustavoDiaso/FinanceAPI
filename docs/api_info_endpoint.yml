@@ -1,0 +1,8 @@
+tags:
+  - API info
+
+summary: Returns API information.
+
+responses:
+  '200':
+    description: All information returned with success
