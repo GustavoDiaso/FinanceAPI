@@ -36,7 +36,7 @@ source .venv/bin/activate
 
 3 - Install project dependencies from requirements.txt 
 
-``pip install -r requirements .txt``
+``pip install -r requirements.txt``
 
 4 - Run the main module
 
