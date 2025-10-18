@@ -34,7 +34,51 @@ parameters:
 responses:
   '200':
     description: Conversion returned with success
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            data: 
+              type: object
+              properties:
+                from:
+                  type: string
+                  example: "USD"
+                to:
+                  type: object
+                  example: {"BRL": 5.25, "EUR": 0.85}
+                amount:
+                  type: number
+                  example: 1
+                date:
+                  type: string
+                  example: "2024-06-15"
+            success:
+              type: boolean
+              example: true
 
   '400':
-    description: A certain URL parameter was passed incorrectly
+    description: Bad Request.
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+          example:
+            error: "The following currency is not supported: {currency}"
+
+  '503':
+    description: Service Unavailable.
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+          example:
+            error: "This endpoint is unavailable at the moment. Please try again later."
 

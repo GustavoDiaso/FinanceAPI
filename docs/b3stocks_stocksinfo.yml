@@ -54,11 +54,106 @@ parameters:
     description: Page number of results to be returned, considering the specified limit. Starts at 1.
 
 responses:
+  
   '200':
     description: Stocks information returned with success
-
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                availableSectors:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    - "Retail Trade"
+                    - "Energy Minerals"
+                    - "Health Services"
+                    - "Utilities"
+                    - "Finance"             
+                indexes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: "Ibovespa"
+                      stock:
+                        type: string
+                        example: "IBOV"
+            sortByOptions:
+              type: array
+              items:
+                type: string
+              example:
+                - "name"
+                - "close"
+                - "change"
+                - "change_abs"
+                - "volume"
+                - "market_cap_basic"
+                - "sector"
+            stocks:
+              type: array
+              items:
+                type: object
+                properties:
+                  stock:
+                    type: string
+                    example: "ABEV3"
+                  name:
+                    type: string
+                    example: "Ambev S.A."
+                  sector:
+                    type: string
+                    example: "Consumer Non-Durables"
+                  close:
+                    type: number
+                    example: 15.30
+                  change:
+                    type: number
+                    example: 3.8998999483
+                  volume:
+                    type: integer
+                    example: 12000000
+                  market_cap:
+                    type: integer
+                    example: 80000000000    
+                  logoUrl:
+                    type: string
+                    example: "https://example.com/logo.png"
+                  type:
+                    type: string
+                    example: "stock"        
+         
   '400':
-    description: A certain URL parameter was passed incorrectly
+    description: Bad Request.
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+          example:
+            error: "Invalid 'order' parameter. Allowed values are: asc, desc."
 
   '503':
-    description: The endpoint is unavailable at the moment.
+    description: Service Unavailable.
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+          example:
+            error: "This endpoint is unavailable at the moment. Please try again later."

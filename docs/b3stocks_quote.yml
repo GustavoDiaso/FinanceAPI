@@ -55,7 +55,7 @@ parameters:
         - true
         - false
 
-  - name: dividens
+  - name: dividends
     in: path
     type: bool
     required: false
@@ -68,9 +68,143 @@ parameters:
 responses:
   '200':
     description: Quotes returned with success
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                symbol:
+                  type: string
+                  example: "PETR4.SA"
+                shortName:
+                  type: string
+                  example: "PETROBRAS PN N2"
+                longName:
+                  type: string
+                  example: "Petrobras - Petróleo Brasileiro S.A. PN N2"
+                currency:
+                  type: string
+                  example: "BRL"
+                usedRange:
+                  type: string
+                  example: "1d"
+                usedInterval:
+                  type: string
+                  example: "1d"
+                historicalDataPrice:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date:
+                        type: timestamp
+                        example: "1760619600"
+                      open:
+                        type: number
+                        example: 15.30
+                      high:
+                        type: number
+                        example: 15.50
+                      low:
+                        type: number
+                        example: 15.10
+                      close:
+                        type: number
+                        example: 15.40
+                      volume:
+                        type: integer
+                        example: 2000000
+                earningsPerShare:
+                  type: number
+                  example: 1.25
+                marketCap:
+                  type: number
+                  example: 5000000000
+                priceEarnings:
+                  type: number
+                  example: 12.32
+                dividendsData:
+                  type: object
+                  properties:
+                    cashDividends:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          approvedOn:
+                            type: datetime
+                            example: "2024-11-15T00:00:00.000Z" 
+                          assetIssued:
+                            type: string
+                            example: "PETR4"
+                          label:
+                            type: string
+                            example: "Dividendo"
+                          lastDatePrior:
+                            type: datetime
+                            example: "2024-12-02T00:00:00.000Z
+                          paymentDate:
+                            type: datetime  
+                            example: "2024-12-30T00:00:00.000Z"
+                          rate:
+                            type: number
+                            example: 0.30
+                          relatedTo:
+                            type: string
+                            example: "September/2024/3rd Quarter"
+                    stockDividends:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          approvedOn:
+                            type: datetime
+                            example: "2024-08-10T00:00:00.000Z"
+                          assetIssued:
+                            type: string
+                            example: "PETR4"
+                          compoleteFactor:
+                            type: string
+                            example: "1:10"
+                          factor:
+                            type: number
+                            example: 0.10
+                          label:
+                            type: string  
+                            example: "JCP"
+                          lastDatePrior:
+                            type: datetime
+                            example: "2024-08-25T00:00:00.000Z"   
+                          remarsks:
+                            type: string
+                            example: "Interest on Equity for the 2nd Quarter"
 
   '400':
-    description: A certain URL parameter was passed incorrectly
+    description: Bad Request.
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+          example:
+            error: "Invalid range parameter. Allowed values are: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max."
 
   '503':
-    description: The endpoint is unavailable at the moment.
+    description: Service Unavailable.
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+          example:
+            error: "This endpoint is unavailable at the moment. Please try again later."

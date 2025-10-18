@@ -1,8 +1,31 @@
 tags:
   - API info
 
-summary: Returns API information.
+summary: Returns information about the FinanceAPI.
 
 responses:
   '200':
     description: All information returned with success
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "FinanceAPI"
+                version:
+                  type: string
+                  example: "1.0.0"
+                description:
+                  type: string
+                  example: "FinanceAPI is a comprehensive financial data API that provides real-time and historical market data, stock quotes, forex rates, and more."  
+                author:
+                  type: string
+                  example: "Gustavo Henrique de Oliveira Dias"

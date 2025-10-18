@@ -29,7 +29,7 @@ def get_api_basic_info() -> dict:
             "linkedin": "https://www.linkedin.com/in/gustavodiaso",
         },
         "externalAPISUsed": {
-            'FrankFurter API': "https://frankfurter.dev/",
+            "FrankFurter API": "https://frankfurter.dev/",
             "Brapi API": "https://brapi.dev/",
         },
         "serverTimeUTC": datetime.now(timezone.utc).isoformat(),
@@ -41,7 +41,7 @@ def get_api_basic_info() -> dict:
                 "/v1/conversion/interval?from=USD&to=BRL&start_date=2025-01-09&end_date=2025-02-09",
                 "/v1/b3stocks/all",
                 "/v1/b3stocks/quote?ticker=PETR3&range=5d&interval=1d",
-                "/v1/b3stocks/stocksinfo?sector=Retail+Trade&limit=10&sortedBy=volume"
+                "/v1/b3stocks/stocksinfo?sector=Retail+Trade&limit=10&sortedBy=volume",
             ]
         },
     }
@@ -148,14 +148,14 @@ def validate_historical_endpoint_params(request) -> dict:
     # --Validating the parameters-- #
     if not currency_exists(from_currency):
         raise custom_exceptions.BadRequestError(
-            f"The following currency does not exist: {from_currency}"
+            f"The following currency is not supported: {from_currency}"
         )
 
     if to_currencies is not None:
         for currency in to_currencies.split(","):
             if not currency_exists(currency):
                 raise custom_exceptions.BadRequestError(
-                    f"The following currency does not exist: {currency}"
+                    f"The following currency is not supported: {currency}"
                 )
 
     try:

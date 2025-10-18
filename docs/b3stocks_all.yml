@@ -6,3 +6,28 @@ summary: Returns the tickers of all stocks traded on B3 at the present time.
 responses:
   '200':
     description: All tickers returned with success
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            type: string
+          example:
+            - "ABEV3"
+            - "B3SA3"
+            - "BBAS3"
+            - "BBDC3"
+            - "BBDC4"
+            - "BBSE3"
+    
+  '503':
+    description: Service Unavailable
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+          example:
+            error: "This endpoint is unavailable at the moment. Please try again later."
