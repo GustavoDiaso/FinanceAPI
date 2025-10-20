@@ -138,7 +138,7 @@ responses:
                         type: object
                         properties:
                           approvedOn:
-                            type: datetime
+                            type: date
                             example: "2024-11-15T00:00:00.000Z" 
                           assetIssued:
                             type: string
@@ -147,10 +147,10 @@ responses:
                             type: string
                             example: "Dividendo"
                           lastDatePrior:
-                            type: datetime
-                            example: "2024-12-02T00:00:00.000Z
+                            type: date
+                            example: "2024-12-02T00:00:00.000Z"
                           paymentDate:
-                            type: datetime  
+                            type: date  
                             example: "2024-12-30T00:00:00.000Z"
                           rate:
                             type: number
@@ -164,7 +164,7 @@ responses:
                         type: object
                         properties:
                           approvedOn:
-                            type: datetime
+                            type: date
                             example: "2024-08-10T00:00:00.000Z"
                           assetIssued:
                             type: string
@@ -179,7 +179,7 @@ responses:
                             type: string  
                             example: "JCP"
                           lastDatePrior:
-                            type: datetime
+                            type: date
                             example: "2024-08-25T00:00:00.000Z"   
                           remarsks:
                             type: string
