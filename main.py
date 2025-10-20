@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_caching import Cache
 from flasgger import Swagger, swag_from
+# -- Production WSGI server -- #
 # from waitress import serve
 from requests import RequestException
 
@@ -376,5 +377,5 @@ def internal_server_error_handler(err):
 if __name__ == "__main__":
     app.run(port=5000, host="localhost", debug=True)
 
-# Use waitress to serve you API
+# Use waitress to serve you API on production
 # serve(app, host='localhost', port=8080)
