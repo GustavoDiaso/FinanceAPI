@@ -22,7 +22,8 @@ session = requests.Session()
 def get_api_basic_info() -> dict:
     return {
         "APIName": "Finance API",
-        "description": "A simple API to get real-time and historical currency quotes.",
+        "description": "A simple API to get real-time and historical currency quotes, as well as stock "
+                        +"information from the Brazilian stock exchange (B3)",
         "author": "Gustavo Henrique de Oliveira Dias",
         "contact": {
             "github": "https://github.com/GustavoDiaso",
